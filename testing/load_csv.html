@@ -1,0 +1,41 @@
+<!DOCTYPE HTML>
+<head>
+	<script src="https://d3js.org/d3.v6.min.js"></script>
+</head>
+<body>
+<div id="table">
+</div>
+
+<script>
+d3.csv("../data/data.csv").then( (data) => {
+	//get key list
+	var keys=[]
+	for(var i in data[0]){
+		keys.push(i)
+	}
+	//table
+	var t=""
+	t+="<table border=1>"
+	//header
+	t+="<tr>"
+	for(var i of keys){
+		t+="<th>"+i+"</th>"
+	}
+	t+="</tr>"
+	//rows
+	for(var row of data){
+		t+="<tr>"
+		for(var val of keys){
+			t+="<td>"+row[val]+"</td>"
+		}
+		t+="</tr>"
+	}
+	//finishing off
+	t+="</table>"
+	document.getElementById("table").innerHTML=t
+})
+
+</script>
+
+
+</body>
