@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>New York COVID-19</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="https://d3js.org/d3-path.v2.min.js"></script>
+    <script src="https://d3js.org/d3-shape.v2.min.js"></script>
+    <script src="https://d3js.org/topojson.v1.min.js"></script>
+    <script src="https://d3js.org/d3-array.v2.min.js"></script>
+    <script src="https://d3js.org/d3-geo.v2.min.js"></script>
+    <script src="https://d3js.org/d3-geo-projection.v3.min.js"></script>
+    <script src="https://unpkg.com/react/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone/babel.js"></script>
+</head>
+
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const csvUrl = './data/data.csv';
+        const mapUrl = "./data/Modified Zip Code Tabulation Areas (MODZCTA).geojson";
+        function useData(csvPath) {
+            const [dataAll, setData] = React.useState(null);
+            React.useEffect(() => {
+                d3.csv(csvPath).then(data => {
+                    data.forEach(d => {
+                        d.zipcode = +d.zipcode;
+                        d.income = +d.income;
+                        d.lat = +d.lat;
+                        d.lon = +d.lon;
+                        d.hosp_count = +d.hosp_count;
+                        d.hosp_rate = +d.hosp_rate;
+                        d.death_count = +d.death_count;
+                        d.death_rate = +d.death_rate/100;
+                        d.pos_rate = +d.pos_rate;
+                        d.tested = +d.tested;
+                        d.pos = +d.pos;
+                        d.test_rate = +d.test_rate;
+                        d.treatment_ratio = d.hosp_count / d.pos; //derive a new attribute: popularity
+                    });
+                    setData(data);
+                });
+            }, []);
+            return dataAll;
+        }
+
+        function useMap(jsonPath) {
+            const [data, setData] = React.useState(null);
+            React.useEffect(() => {
+                d3.json(jsonPath).then(geoJsonData => {
+                    setData(geoJsonData);
+                })
+            }, []);
+            return data;
+        }
+
+        ///Map for view 1 (death_rate)
+        function Map1(props) {
+            const { x, y, map, data, height, width, selectedPlace, setSelectedPlace } = props;
+
+            const projection = d3.geoMercator().fitSize([width, height], map);
+            const path = d3.geoPath(projection);
+
+            const deathRate = data.map(d => d.death_rate);
+            const colorScale = d3.scaleQuantize()
+                .range(["brown", "steelblue"])
+                .domain([0,1]);
+
+            const mouseOver = d => {
+                setSelectedPlace(d.zipcode);
+            };
+            const mouseOut = () => {
+                setSelectedPlace(null);
+            };
+
+            if (selectedPlace === null) {
+                return <g transform={`translate(${x}, ${y})`}>
+                    {map.features.map(feature => {
+                        // feature.properties.modzcta can be 99999
+                        // which is not present in data, causing `place` to be []
+                        // when searching for it
+                        const place = data.filter(d => d.zipcode == feature.properties.modzcta);
+                        let drate=0
+                        if(place.length>0){
+                            drate=place[0].death_rate
+                        }else{
+                            drate=0
+                        }
+                        return <path key={feature.properties.modzcta + "boundary"} d={path(feature)}
+                            style={{ fill: colorScale(drate)}} />
+                    })}
+                </g>
+            } else {
+                return <g transform={`translate(${x}, ${y})`}>
+                    {map.features.map(feature => {
+                        const place = data.filter(d => d.zipcode == feature.properties.modacta);
+                        let drate=0
+                        if(place.length>0) {
+                            drate=place[0].death_rate
+                        } else {
+                            drate=0
+                        }
+                        return <path key={feature.properties.modzcta + "boundary"} d={path(feature)}
+                            style={{ fill: colorScale(drate) }} />
+                    })}
+                </g>
+            }
+        }
+
+        const COVID19 = () => {
+            const [selectedPlace, setSelectedPlace] = React.useState(null);
+            const data = useData(csvUrl);
+            const map = useMap(mapUrl);
+            if (!map || !data) {
+                return <pre>Loading...</pre>;
+            };
+            const WIDTH = 1200;
+            const HEIGHT = 800;
+            const margin = { top: 20, right: 40, bottom: 160, left: 40, gap: 40 };
+            const innerWidth = WIDTH - margin.left - margin.right - margin.gap;
+            const innerHeight = HEIGHT - margin.top - margin.bottom - margin.gap;
+
+            return <div>
+                <svg width={WIDTH} height={HEIGHT}>
+                    <Map1 x={margin.left} y={margin.top} height={innerHeight + margin.gap}
+                        width={innerWidth / 2} data={data} map={map} selectedPlace={selectedPlace}
+                        setSelectedPlace={setSelectedPlace} />
+                </svg>
+                <div style={{ position: "absolute", textAlign: "left", width: "240px", left: "40px", top: "40px" }}>
+                    <h3>New York COVID-19</h3>
+                    <p>A visualization of the death rate in New York</p>
+                </div>
+
+            </div>
+        }
+        ReactDOM.render(<COVID19 />, document.getElementById('root'));
+    </script>
+</body>
+
+</html>
