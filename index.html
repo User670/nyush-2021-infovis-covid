@@ -43,13 +43,13 @@
                         d.lat = +d.lat;
                         d.lon = +d.lon;
                         d.hosp_count = +d.hosp_count;
-                        // d.hosp_rate = parseFloat(d.hosp_rate);
-                        // d.death_count = parseFloat(d.death_count);
-                        // d.death_rate = parseFloat(d.death_rate) / 100000;
+                        d.hosp_rate = parseFloat(d.hosp_rate);
+                        d.death_count = parseFloat(d.death_count);
+                        d.death_rate = parseFloat(d.death_rate) / 100000;
                         // parseFloat will convert empty strings to NaN.
-                        d.hosp_rate = +d.hosp_rate;
-                        d.death_count = +d.death_count;
-                        d.death_rate = +d.death_rate / 100000;
+                        //d.hosp_rate = +d.hosp_rate;
+                        //d.death_count = +d.death_count;
+                        //d.death_rate = +d.death_rate / 100000;
                         d.pos_rate = +d.pos_rate;
                         d.tested = +d.tested;
                         d.pos = +d.pos;
@@ -260,8 +260,8 @@
                 <ul>
                     <li style={{ fontSize: '8px' }}> {"Zipcode: " + selectedData.zipcode} </li>
                     <li style={{ fontSize: '8px' }}> {"Income: " + selectedData.income} </li>
-                    <li style={{ fontSize: '8px' }}> {"Death Rate: " + isNaN(selectedData.death_rate) ? selectedData.death_rate : "Missing data"} </li>
-                    <li style={{ fontSize: '8px' }}> {"Number of Deaths: " + isNaN(selectedData.death_count) ? selectedData.death_count : "Missing data"} </li>
+                    <li style={{ fontSize: '8px' }}> {"Death Rate: " + (!isNaN(selectedData.death_rate) ? (selectedData.death_rate*100000).toFixed(1)+" per 100,000 people" : "Missing data")} </li>
+                    <li style={{ fontSize: '8px' }}> {"Number of Deaths: " + (!isNaN(selectedData.death_count) ? selectedData.death_count : "Missing data")} </li>
                 </ul>
             </div>
         }
@@ -392,7 +392,7 @@
                         x={xScale(i)}
                         y={yScale(d.hosp_rate)}
                         width={xScale(1)}
-                        height={height - yScale(d.hosp_rate)}
+                        height={(height - yScale(d.hosp_rate))||0}
                         stroke={d.zipcode == selectedPlace ? "black" : "#CCCCCC"}
                         fill={d.zipcode == selectedPlace ? "red" : "#EEEEEE"}
                         onMouseEnter={() => setSelectedPlace(d.zipcode)}
@@ -426,7 +426,7 @@
                 dataCopy.push(data[i])
             }
             dataCopy.sort((a, b) => {
-                return b.death_rate - a.death_rate;
+                return (b.death_rate||0) - (a.death_rate||0);
             })
             for (let i = 0; i < dataCopy.length; i++) {
                 dataCopy[i].rank = i
@@ -447,7 +447,7 @@
                         x={xScale(i)}
                         y={yScale(d.death_rate)}
                         width={xScale(1)}
-                        height={height - yScale(d.death_rate)}
+                        height={(height - yScale(d.death_rate))||0}
                         stroke={d.zipcode == selectedPlace ? "black" : "#CCCCCC"}
                         fill={d.zipcode == selectedPlace ? "red" : "#EEEEEE"}
                         onMouseEnter={() => setSelectedPlace(d.zipcode)}
@@ -549,8 +549,8 @@
                 <p style={{ fontSize: '10px', margin: '5px' }}>{selectedData.name}</p>
                 <ul>
                     <li style={{ fontSize: '8px' }}> {"Zipcode: " + selectedData.zipcode} </li>
-                    <li style={{ fontSize: '8px' }}> {"Treatment Ratio: " + isNaN(selectedData.treatment_ratio) ? selectedData.treatment_ratio : "Missing data"} </li>
-                    <li style={{ fontSize: '8px' }}> {"Hospitalization Count: " + isNaN(selectedData.hosp_count) ? selectedData.hosp_count : "Missing data"} </li>
+                    <li style={{ fontSize: '8px' }}> {"Treatment Ratio: " + (!isNaN(selectedData.treatment_ratio) ? (selectedData.treatment_ratio*100).toFixed(2)+"%" : "Missing data")} </li>
+                    <li style={{ fontSize: '8px' }}> {"Hospitalization Count: " + (!isNaN(selectedData.hosp_count) ? selectedData.hosp_count : "Missing data")} </li>
                     <li style={{ fontSize: '8px' }}> {"Tested Positive Count: " + selectedData.pos} </li>
                 </ul>
             </div>
@@ -612,10 +612,12 @@
                         tooltipX={tooltipX} setTooltipX={setTooltipX} tooltipY={tooltipY} setTooltipY={setTooltipY} />
                     <BarChartHospitalizationRate x={margin.left+10} y={margin.top} height={innerHeight * 0.45 + margin.gap}
                         width={innerWidth * 0.55} data={data} map={map} selectedPlace={selectedPlace}
-                        setSelectedPlace={setSelectedPlace} />
+                        setSelectedPlace={setSelectedPlace} 
+                        tooltipX={tooltipX} setTooltipX={setTooltipX} tooltipY={tooltipY} setTooltipY={setTooltipY} />
                     <BarChartDeathRate x={margin.left+10} y={margin.top + innerHeight * 0.55} height={innerHeight * 0.45 + margin.gap}
                         width={innerWidth * 0.55} data={data} map={map} selectedPlace={selectedPlace}
-                        setSelectedPlace={setSelectedPlace} />
+                        setSelectedPlace={setSelectedPlace}
+                        tooltipX={tooltipX} setTooltipX={setTooltipX} tooltipY={tooltipY} setTooltipY={setTooltipY} />
                 </svg>
                 <div style={{ position: "absolute", textAlign: "left", width: "320px", left: "250px", top: "5px" }}>
                     <h3>New York COVID-19</h3>
