@@ -14,20 +14,33 @@
     <script src="https://unpkg.com/react-dom/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/babel-standalone/babel.js"></script>
     <style>
+        body{
+            font-family: sans-serif;
+        }
+
         .view-selector-selected {
-            color: red
+            /*color: red;*/
+            border-radius: 8px;
+            border:2px solid yellow;
+            background-color: yellow;
+            padding:4px;
+            margin: 0px 4px;
         }
 
         .view-selector-unselected {
-            color: gray
+            /*color: gray;*/
+            border-radius: 8px;
+            border:2px solid yellow;
+            padding:4px;
+            margin: 0px 4px;
         }
     </style>
 </head>
 
 <body>
     <p>
-        <span id="radio1" class="view-selector-selected" onclick="switchToView1()"> View 1 </span>
-        <span id="radio2" class="view-selector-unselected" onclick="switchToView2()"> View 2 </span>
+        <span id="radio1" class="view-selector-selected" onclick="switchToView1()"> Income and Death Rate </span>
+        <span id="radio2" class="view-selector-unselected" onclick="switchToView2()"> Treatment Ratio </span>
     </p>
     <div id="root"></div>
     <script type="text/babel">
