@@ -13,25 +13,27 @@
     <script src="https://unpkg.com/react/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/babel-standalone/babel.js"></script>
+
     <style>
-        body{
+        body {
             font-family: sans-serif;
+            background-color: rgb(255, 253, 245);
         }
 
         .view-selector-selected {
             /*color: red;*/
             border-radius: 8px;
-            border:2px solid lightskyblue;
+            border: 2px solid lightskyblue;
             background-color: lightskyblue;
-            padding:4px;
+            padding: 4px;
             margin: 0px 4px;
         }
 
         .view-selector-unselected {
             /*color: gray;*/
             border-radius: 8px;
-            border:2px solid lightskyblue;
-            padding:4px;
+            border: 2px solid lightskyblue;
+            padding: 4px;
             margin: 0px 4px;
         }
     </style>
@@ -100,15 +102,17 @@
                             </text>
                         </g>
                     })}
-                    <text style={{ textAnchor: 'start', fontSize: '15px' }} transform={`translate(20, 110)rotate(-90)`}>
+                    <text style={{ textAnchor: 'start', fontSize: '13px', }} transform={`translate(20, 110)rotate(-90)`}>
                         {yText || "COVID Death Rate"}
+                    </text>
+                    <text style={{ textAnchor: 'start', fontSize: '13px', }} transform={`translate(32, 110)rotate(-90)`}>
+                        {yText || "    (per 100000 ppl)"}
                     </text>
                 </g>)
         }
 
         function XAxes(props) {
             const { xScale, width, height } = props;
-            console.log(xScale.ticks())
             const ticks = xScale.ticks();
             return (
                 <g>
@@ -121,45 +125,60 @@
                             </text>
                         </g>
                     })}
-                    <text style={{ textAnchor: 'end', fontSize: '15px' }} transform={`translate(${width}, ${height - 10})`}>
+                    <text style={{ textAnchor: 'end', fontSize: '13px' }} transform={`translate(${width}, ${height - 10})`}>
                         {"Median Incomes of All Household"}
                     </text>
                 </g>)
         }
 
         function Points(props) {
-            const [selectedPoint, setSelectedPoint] = React.useState(null);
-            const { data, xScale, yScale, width, height } = props;
+            //const [selectedPlace, setselectedPlace] = React.useState(null);
+            const { data, height, width, selectedPlace, setSelectedPlace, avg,
+                xScale, yScale, tooltipX, setTooltipX, tooltipY, setTooltipY } = props;
 
-            const mouseOver = d => {
-                setSelectedPoint(d.zipcode);
-            };
-            const mouseOut = () => {
-                setSelectedPoint(null);
-            };
-            const color = d => d.zipcode === selectedPoint ? "red" : "steelblue";
-            const radius = d => d.zipcode === selectedPoint ? 10 : 5;
+            const color = d => d.zipcode === selectedPlace ? "red" : "grey";
+            const radius = d => d.zipcode === selectedPlace ? 10 : 5;
 
             return (
                 <g>
-                    {data.filter(d => d.zipcode !== selectedPoint).map(d => {
+                    {data.filter(d => d.zipcode !== selectedPlace).map(d => {
                         // Point not rendered if data is empty
                         if (isNaN(d.death_rate)) return null;
                         //console.log(d.income,d.death_rate)
-                        return <circle key={d.index} cx={xScale(d.income)}
-                            cy={yScale(d.death_rate)} r={radius(d)} fill={color(d)} stroke={"black"}
-                            onMouseOver={() => mouseOver(d)} onMouseOut={mouseOut}
+                        return <circle key={d.lat + d.lon} cx={xScale(d.income)}
+                            cy={yScale(d.death_rate * 100000)} r={radius(d)} fill={color(d)} stroke={"black"}
+                            // onMouseOver={() => mouseOver(d)} onMouseOut={mouseOut}
+                            onMouseOver={(event) => {
+                                setSelectedPlace(d.zipcode)
+                                setTooltipX(event.pageX);
+                                setTooltipY(event.pageY);
+                            }}
+                            onMouseOut={(event) => {
+                                setSelectedPlace(null);
+                                setTooltipX(null);
+                                setTooltipY(null);
+                            }}
                         />
                     })}
 
-                    {selectedPoint && <rect x="0" y="0" width={width} height={height / 2} fill="#fce703" opacity="0.5" />}
-                    {data.filter(d => d.zipcode === selectedPoint).map(d => {
+                    {selectedPlace && <rect x="0" y="0" width={width} height={height / 2} fill="MistyRose" opacity="0.5" />}
+                    {data.filter(d => d.zipcode === selectedPlace).map(d => {
                         // Point not rendered if data is empty
                         if (isNaN(d.death_rate)) return null;
                         //console.log(d.income,d.death_rate)
-                        return <circle key={d.index} cx={xScale(d.income)}
-                            cy={yScale(d.death_rate)} r={radius(d)} fill={color(d)} stroke={"black"}
-                            onMouseOver={() => mouseOver(d)} onMouseOut={mouseOut}
+                        return <circle key={d.lat + d.lon} cx={xScale(d.income)}
+                            cy={yScale(d.death_rate * 100000)} r={radius(d)} fill={color(d)} stroke={"black"}
+                            // onMouseOver={() => mouseOver(d)} onMouseOut={mouseOut}
+                            onMouseOver={(event) => {
+                                setSelectedPlace(d.zipcode)
+                                setTooltipX(event.pageX);
+                                setTooltipY(event.pageY);
+                            }}
+                            onMouseOut={(event) => {
+                                setSelectedPlace(null);
+                                setTooltipX(null);
+                                setTooltipY(null);
+                            }}
                         />
                     })}
                 </g>)
@@ -167,29 +186,57 @@
 
 
         function ScatterPlot(props) {
-            const dataAll = useData(csvUrl);
-            if (!dataAll) {
-                return <pre>Loading...</pre>;
-            }
-            const width = 600;
-            const height = 800;
-            const margin = { top: 20, right: 40, bottom: 160, left: 50, gap: 40 };
-            const innerHeight = height - margin.top - margin.bottom;
-            const innerWidth = width - margin.left - margin.right;
+            const { x, y, map, data, height, width, selectedPlace, setSelectedPlace,
+                highlightPlace, tooltipX, setTooltipX, tooltipY, setTooltipY, incomecategory } = props;
 
             const xScale = d3.scaleLinear()
-                .range([0, innerWidth])
-                .domain([0, d3.max(dataAll, d => d.income)]).nice();
+                .range([0, width])
+                .domain([0, d3.max(data, d => d.income)]).nice();
             const yScale = d3.scaleLinear()
-                .range([innerHeight / 2, 0])
-                .domain([0, d3.max(dataAll, d => d.death_rate)]).nice();
-            //const data = dataAll.filter(d => {
-            //return d.month === "May";
-            //})
-            return <g transform={`translate(${margin.left}, ${margin.top + 120})`}>
-                <Points data={dataAll} xScale={xScale} yScale={yScale} width={innerWidth} height={innerHeight} />
-                <YAxes yScale={yScale} height={innerHeight / 2} />
-                <XAxes xScale={xScale} width={innerWidth} height={innerHeight / 2} />
+                .range([height / 2, 0])
+                .domain([0, d3.max(data, d => d.death_rate * 100000)]).nice();
+            const avg = d3.mean(data, d => d.death_rate*100000)
+            const avg1 = d3.mean(highlightPlace, d => d.death_rate*100000)
+
+            const optimalFilteredAverageHeight=(
+                ()=>{
+                    let yAvg=yScale(avg)-2
+                    let yAvg1=yScale(avg1)-2
+                    let safeDistance=10
+                    let lowest=height/2-23
+                    // If filtered avg is above regular avg, keep a safe distance above regular avg
+                    if(yAvg1<yAvg){
+                        return Math.min(yAvg-safeDistance, yAvg1)
+                    }
+                    // If filtered is below...
+                    else{
+                        // If the line is too close to regular avg, display text below the line
+                        if(yAvg1-yAvg<safeDistance){
+                            return yAvg1+12
+                        }
+                        // else, display above the line as usual, but avoid the X axis text
+                        else{
+                            return Math.min(yAvg1, lowest)
+                        }
+                    }
+                }
+            )()
+
+
+            return <g transform={`translate(${x}, ${y + 120})`}>
+                <Points data={highlightPlace} xScale={xScale} yScale={yScale} width={width} height={height}
+                    selectedPlace={selectedPlace} setSelectedPlace={setSelectedPlace} avg={avg}
+                    tooltipX={tooltipX} setTooltipX={setTooltipX} tooltipY={tooltipY} setTooltipY={setTooltipY} />
+                <YAxes yScale={yScale} height={height / 2} />
+                <XAxes xScale={xScale} width={width} height={height / 2} />
+                <line y1={yScale(avg1)} y2={yScale(avg1)} x2={width} stroke="green" />
+                <line y1={yScale(avg)} y2={yScale(avg)} x2={width} stroke="red" />
+                <text style={{ textAnchor: "end", fontSize: "10px" }} transform={`translate(${width}, ${yScale(avg) - 2})`}>Average: {avg.toFixed(2)}</text>
+                {(()=>{
+                    if(incomecategory!=0){
+                        return <text style={{textAnchor: "end",fontSize: "10px"}} transform={`translate(${width}, ${optimalFilteredAverageHeight})`}>Filtered Average: {avg1.toFixed(2)}</text>
+                    }
+                })()}
             </g>
         }
 
@@ -215,31 +262,44 @@
                 setSelectedPlace(null);
             };
 
-            return <g transform={`translate(${x}, ${y})`}>
-                {map.features.map(feature => {
-                    const place = highlightPlace.filter(d => d.zipcode.toString() === feature.properties.modzcta);
-                    let drate = 0;
-                    let placecode = 0;
-                    if (place.length > 0) {
-                        drate = place[0].death_rate;
-                        placecode = place[0].zipcode;
-                    } else {
-                        drate = 0
+            let mapElements=map.features.map(feature => {
+                const place=highlightPlace.filter(d => d.zipcode.toString()===feature.properties.modzcta);
+                let drate=0;
+                let placecode=0;
+                if(place.length>0) {
+                    drate=place[0].death_rate;
+                    placecode=place[0].zipcode;
+                } else {
+                    drate=0
+                }
+                return <path key={feature.properties.modzcta+"boundary"} d={path(feature)}
+                    // isNaN part: render region as empty if empty value
+                    style={{fill: placecode===0||isNaN(drate)? "#EEEEEE":colorScale(drate)}}
+                    stroke={placecode===selectedPlace? "black":"white"}
+                    strokeWidth={placecode===selectedPlace? "1px":"0.5px"}
+                    onMouseOver={(event) => {
+                        setSelectedPlace(place[0].zipcode)
+                        setTooltipX(event.pageX);
+                        setTooltipY(event.pageY);
+                    }}
+                    onMouseOut={(event) => {
+                        setSelectedPlace(null);
+                        setTooltipX(null);
+                        setTooltipY(null);
+                    }} />
+            })
+            if(selectedPlace!=null){
+                for(let i=0;i<map.features.length;i++){
+                    if(map.features[i].properties.modzcta == selectedPlace.toString()){
+                        mapElements.push(mapElements[i])
+                        mapElements[i]=null
+                        break
                     }
-                    return <path key={feature.properties.modzcta + "boundary"} d={path(feature)}
-                        // isNaN part: render region as empty if empty value
-                        style={{ fill: placecode === 0 || isNaN(drate) ? "#EEEEEE" : colorScale(drate) }} stroke={placecode === selectedPlace ? "black" : ""}
-                        onMouseOver={(event) => {
-                            setSelectedPlace(place[0].zipcode)
-                            setTooltipX(event.pageX);
-                            setTooltipY(event.pageY);
-                        }}
-                        onMouseOut={(event) => {
-                            setSelectedPlace(null);
-                            setTooltipX(null);
-                            setTooltipY(null);
-                        }} />
-                })}
+                }
+            }
+
+            return <g transform={`translate(${x}, ${y})`}>
+                {mapElements}
             </g>
         }
 
@@ -273,7 +333,7 @@
                 <ul>
                     <li style={{ fontSize: '8px' }}> {"Zipcode: " + selectedData.zipcode} </li>
                     <li style={{ fontSize: '8px' }}> {"Income: " + selectedData.income} </li>
-                    <li style={{ fontSize: '8px' }}> {"Death Rate: " + (!isNaN(selectedData.death_rate) ? (selectedData.death_rate*100000).toFixed(1)+" per 100,000 people" : "Missing data")} </li>
+                    <li style={{ fontSize: '8px' }}> {"Death Rate: " + (!isNaN(selectedData.death_rate) ? (selectedData.death_rate * 100000).toFixed(1) + " per 100,000 people" : "Missing data")} </li>
                     <li style={{ fontSize: '8px' }}> {"Number of Deaths: " + (!isNaN(selectedData.death_count) ? selectedData.death_count : "Missing data")} </li>
                 </ul>
             </div>
@@ -315,7 +375,7 @@
                 return <pre>Loading...</pre>;
             };
             const WIDTH = 1200;
-            const HEIGHT = 800;
+            const HEIGHT = 700;
             const margin = { top: 20, right: 40, bottom: 160, left: 40, gap: 40 };
             const innerWidth = WIDTH - margin.left - margin.right - margin.gap;
             const innerHeight = HEIGHT - margin.top - margin.bottom - margin.gap;
@@ -345,8 +405,9 @@
 
             return <div>
                 <div>
+                    Filter by income: 
                     <input key="slider" type='range' min='0' max='10' value={incomecategory} step='1' onChange={changeHandler} />
-                    <input key="incomeText" type="text" value={INCOMECATEGORY[incomecategory]} readOnly />
+                    <span>{INCOMECATEGORY[incomecategory]}</span>
                 </div>
                 <svg width={WIDTH} height={HEIGHT}>
                     <Legend1 x={WIDTH / 2} y={margin.top} data={data} />
@@ -355,12 +416,15 @@
                         width={innerWidth / 2} data={data} map={map} selectedPlace={selectedPlace}
                         setSelectedPlace={setSelectedPlace} highlightPlace={highlightPlace}
                         tooltipX={tooltipX} setTooltipX={setTooltipX} tooltipY={tooltipY} setTooltipY={setTooltipY} />
-                    <ScatterPlot x={margin.left} y={margin.top} height={550}
-                        width={370} data={data} />
+                    <ScatterPlot x={margin.left} y={margin.top+20} height={innerHeight + margin.gap}
+                        width={innerWidth / 2} data={data} map={map} selectedPlace={selectedPlace}
+                        setSelectedPlace={setSelectedPlace} highlightPlace={highlightPlace}
+                        tooltipX={tooltipX} setTooltipX={setTooltipX} tooltipY={tooltipY} setTooltipY={setTooltipY} 
+                        incomecategory={incomecategory} />
                 </svg>
-                <div style={{ position: "absolute", textAlign: "left", width: "400px", left: "20px", top: "80px" }}>
-                    <h3>New York COVID-19</h3>
-                    <p>A visualization of the death rate in New York</p>
+                <div style={{ position: "absolute", textAlign: "left", width: "300px", left: "20px", top: "80px" }}>
+                    <h3 style={{fontSize: "22px"}}>New York COVID-19</h3>
+                    <p>A visualization of the death rate and income in New York</p>
                 </div>
                 <div>
                     <Tooltip1 data={data} selectedPlace={selectedPlace} setSelectedPlace={setSelectedPlace}
@@ -373,12 +437,14 @@
         ReactDOM.render(<COVID19 />, document.getElementById('root'));
     </script>
 
-    <div id="view2" style="display:none" />
+    <!---------------------------------------------------------------------------------------------->
+    <div id="view2" style="display:none"></div>
     <script type="text/babel">
 
         // top bar chart (hosp/100K)
         function BarChartHospitalizationRate(props) {
-            const { x, y, map, data, height, width, selectedPlace, setSelectedPlace } = props;
+            const { x, y, map, data, height, width, selectedPlace, setSelectedPlace,
+                tooltipX, setTooltipX, tooltipY, setTooltipY } = props;
             let dataCopy = []
             for (let i = 0; i < data.length; i++) {
                 dataCopy.push(data[i])
@@ -398,34 +464,64 @@
                 .domain([0, d3.max(dataCopy, (d) => { return d.hosp_rate })])
                 .nice()
             let rectElements = []
+            let selectedIdx = -1;
+            let totalTally = 0;
+            let totalCount = 0;
             for (let i = 0; i < dataCopy.length; i++) {
                 let d = dataCopy[i]
+                if (d.zipcode == selectedPlace) {
+                    selectedIdx = i
+                }
+                if (!isNaN(d.hosp_rate)) {
+                    totalTally += d.hosp_count
+                    totalCount += (d.hosp_count/d.hosp_rate)||0
+                }
                 rectElements.push(
                     <rect
+                        key={"rect" + d.zipcode}
                         x={xScale(i)}
                         y={yScale(d.hosp_rate)}
                         width={xScale(1)}
-                        height={(height - yScale(d.hosp_rate))||0}
-                        stroke={d.zipcode == selectedPlace ? "black" : "#CCCCCC"}
-                        fill={d.zipcode == selectedPlace ? "red" : "#EEEEEE"}
-                        onMouseEnter={() => setSelectedPlace(d.zipcode)}
-                        onMouseOut={() => setSelectedPlace(null)}
+                        height={(height - yScale(d.hosp_rate)) || 0}
+                        stroke={d.zipcode == selectedPlace ? "darkorange" : "skyblue"}
+                        strokeWidth={d.zipcode == selectedPlace ? "1.5px" : "0.3px"}
+                        fill={d.zipcode == selectedPlace ? "darkorange" : "ghostwhite"}
+                        onMouseOver={(event) => {
+                            setSelectedPlace(d.zipcode)
+                            setTooltipX(event.pageX);
+                            setTooltipY(event.pageY);
+                        }}
+                        onMouseOut={(event) => {
+                            setSelectedPlace(null);
+                            setTooltipX(null);
+                            setTooltipY(null);
+                        }}
                     />
                 )
+
             }
+            if (selectedIdx != -1) {
+                rectElements.push(rectElements[selectedIdx])
+                rectElements[selectedIdx] = null
+            }
+            let avgValue = totalTally / totalCount
 
             return (
                 <g transform={`translate(${x}, ${y})`}>
-                    <line y2={height} stroke="black" />
+                    <line y2={height} stroke="gray" />
                     {yScale.ticks(5).map(tickValue => {
                         return (
                             <g key={tickValue} transform={`translate(-10, ${yScale(tickValue)})`}>
-                                <line x2={10} stroke="black" />
+                                <line x2={10} stroke="gray" />
                                 <text style={{ textAnchor: 'end', fontSize: '10px' }}>{tickValue}</text>
                             </g>
                         )
                     })}
                     {rectElements}
+                    <line y1={yScale(avgValue)} y2={yScale(avgValue)} x2={width - 50} stroke="red" />
+                    <text style={{ textAnchor: "end", fontSize: "10px" }} transform={`translate(${width - 50}, ${yScale(avgValue) - 2})`}>Average: {avgValue.toFixed(2)}</text>
+                    <text transform={`translate(3,13)`} style={{fontSize: "12px"}}>Hospitalization</text>
+                    <text transform={`translate(3,26)`} style={{fontSize: "12px"}}>per 100,000 ppl</text>
                 </g>
             )
         }
@@ -433,13 +529,14 @@
         // bottom bar chart (death/100K)
         // Unless necessary, copy from above
         function BarChartDeathRate(props) {
-            const { x, y, map, data, height, width, selectedPlace, setSelectedPlace } = props;
+            const { x, y, map, data, height, width, selectedPlace, setSelectedPlace,
+                tooltipX, setTooltipX, tooltipY, setTooltipY } = props;
             let dataCopy = []
             for (let i = 0; i < data.length; i++) {
                 dataCopy.push(data[i])
             }
             dataCopy.sort((a, b) => {
-                return (b.death_rate||0) - (a.death_rate||0);
+                return (b.death_rate || 0) - (a.death_rate || 0);
             })
             for (let i = 0; i < dataCopy.length; i++) {
                 dataCopy[i].rank = i
@@ -450,37 +547,70 @@
                 .domain([0, dataCopy.length])
             const yScale = d3.scaleLinear()
                 .range([height, 0])
-                .domain([0, d3.max(dataCopy, (d) => { return d.death_rate })])
+                .domain([0, d3.max(dataCopy, (d) => { return d.death_rate * 100000 })])
                 .nice()
             let rectElements = []
+            let selectedIdx = -1;
+            let totalTally = 0;
+            let totalCount = 0;
             for (let i = 0; i < dataCopy.length; i++) {
                 let d = dataCopy[i]
+                if (d.zipcode == selectedPlace) {
+                    selectedIdx = i
+                }
+                if (!isNaN(d.death_rate)) {
+                    console.log(d.death_count, d.death_rate)
+                    totalTally += d.death_count
+                    totalCount += (d.death_count/(d.death_rate*100000))||0
+                }
                 rectElements.push(
                     <rect
+                        key={"rect2" + d.zipcode}
                         x={xScale(i)}
-                        y={yScale(d.death_rate)}
+                        y={yScale(d.death_rate * 100000)}
                         width={xScale(1)}
-                        height={(height - yScale(d.death_rate))||0}
-                        stroke={d.zipcode == selectedPlace ? "black" : "#CCCCCC"}
-                        fill={d.zipcode == selectedPlace ? "red" : "#EEEEEE"}
-                        onMouseEnter={() => setSelectedPlace(d.zipcode)}
-                        onMouseOut={() => setSelectedPlace(null)}
+                        height={(height - yScale(d.death_rate * 100000)) || 0}
+                        stroke={d.zipcode == selectedPlace ? "steelblue" : "navajowhite"}
+                        strokeWidth={d.zipcode == selectedPlace ? "1.5px" : "0.3px"}
+                        fill={d.zipcode == selectedPlace ? "steelblue" : "seashell"}
+                        onMouseOver={(event) => {
+                            setSelectedPlace(d.zipcode)
+                            setTooltipX(event.pageX);
+                            setTooltipY(event.pageY);
+                        }}
+                        onMouseOut={(event) => {
+                            setSelectedPlace(null);
+                            setTooltipX(null);
+                            setTooltipY(null);
+                        }}
+
                     />
                 )
+
             }
+            if (selectedIdx != -1) {
+                rectElements.push(rectElements[selectedIdx])
+                rectElements[selectedIdx] = null
+            }
+            let avgValue = totalTally / totalCount
+
 
             return (
                 <g transform={`translate(${x}, ${y})`}>
-                    <line y2={height} stroke="black" />
+                    <line y2={height} stroke="gray" />
                     {yScale.ticks(5).map(tickValue => {
                         return (
                             <g key={tickValue} transform={`translate(-10, ${yScale(tickValue)})`}>
-                                <line x2={10} stroke="black" />
+                                <line x2={10} stroke="gray" />
                                 <text style={{ textAnchor: 'end', fontSize: '10px' }}>{tickValue}</text>
                             </g>
                         )
                     })}
                     {rectElements}
+                    <line y1={yScale(avgValue)} y2={yScale(avgValue)} x2={width - 200} stroke="red" />
+                    <text style={{ textAnchor: "end", fontSize: "10px" }} transform={`translate(${width - 200}, ${yScale(avgValue) - 2})`}>Average: {avgValue.toFixed(2)}</text>
+                    <text transform={`translate(3,13)`} style={{fontSize: "12px"}}>Death</text>
+                    <text transform={`translate(3,26)`} style={{fontSize: "12px"}}>per 100,000 ppl</text>
                 </g>
             )
         }
@@ -505,33 +635,47 @@
             const mouseOut = () => {
                 setSelectedPlace(null);
             };
-
-            return <g transform={`translate(${x}, ${y})`}>
-                {map.features.map(feature => {
-                    const place = data.filter(d => d.zipcode.toString() === feature.properties.modzcta);
-                    let trate = 0;
-                    let placecode = 0;
-                    if (place.length > 0) {
-                        trate = place[0].treatment_ratio;
-                        placecode = place[0].zipcode;
-                    } else {
-                        trate = 0
+            
+            let mapElements=map.features.map(feature => {
+                const place=data.filter(d => d.zipcode.toString()===feature.properties.modzcta);
+                let trate=0;
+                let placecode=0;
+                if(place.length>0) {
+                    trate=place[0].treatment_ratio;
+                    placecode=place[0].zipcode;
+                } else {
+                    trate=0
+                }
+                return <path key={feature.properties.modzcta+"boundary"} d={path(feature)}
+                    style={{fill: placecode===0||isNaN(trate)? "#EEEEEE":colorScale(trate)}}
+                    stroke={placecode===selectedPlace? "black":"white"}
+                    strokeWidth={placecode===selectedPlace? "1px":"0.5px"}
+                    onMouseOver={(event) => {
+                        setSelectedPlace(place[0].zipcode)
+                        setTooltipX(event.pageX);
+                        setTooltipY(event.pageY);
+                    }}
+                    onMouseOut={(event) => {
+                        setSelectedPlace(null);
+                        setTooltipX(null);
+                        setTooltipY(null);
+                    }} />
+            })
+            if(selectedPlace!=null) {
+                for(let i=0;i<map.features.length;i++) {
+                    if(map.features[i].properties.modzcta==selectedPlace.toString()) {
+                        mapElements.push(mapElements[i])
+                        mapElements[i]=null
+                        break
                     }
-                    return <path key={feature.properties.modzcta + "boundary"} d={path(feature)}
-                        style={{ fill: placecode === 0 || isNaN(trate) ? "#EEEEEE" : colorScale(trate) }} stroke={placecode === selectedPlace ? "black" : ""}
-                        onMouseOver={(event) => {
-                            setSelectedPlace(place[0].zipcode)
-                            setTooltipX(event.pageX);
-                            setTooltipY(event.pageY);
-                        }}
-                        onMouseOut={(event) => {
-                            setSelectedPlace(null);
-                            setTooltipX(null);
-                            setTooltipY(null);
-                        }} />
-                })}
+                }
+            }
+            
+            return <g transform={`translate(${x}, ${y})`}>
+                {mapElements}
             </g>
         }
+
 
         function Tooltip2(props) {
             const { data, selectedPlace, setSelectedPlace,
@@ -562,7 +706,7 @@
                 <p style={{ fontSize: '10px', margin: '5px' }}>{selectedData.name}</p>
                 <ul>
                     <li style={{ fontSize: '8px' }}> {"Zipcode: " + selectedData.zipcode} </li>
-                    <li style={{ fontSize: '8px' }}> {"Treatment Ratio: " + (!isNaN(selectedData.treatment_ratio) ? (selectedData.treatment_ratio*100).toFixed(2)+"%" : "Missing data")} </li>
+                    <li style={{ fontSize: '8px' }}> {"Treatment Ratio: " + (!isNaN(selectedData.treatment_ratio) ? (selectedData.treatment_ratio * 100).toFixed(2) + "%" : "Missing data")} </li>
                     <li style={{ fontSize: '8px' }}> {"Hospitalization Count: " + (!isNaN(selectedData.hosp_count) ? selectedData.hosp_count : "Missing data")} </li>
                     <li style={{ fontSize: '8px' }}> {"Tested Positive Count: " + selectedData.pos} </li>
                 </ul>
@@ -603,8 +747,8 @@
             if (!map || !data) {
                 return <pre>Loading...</pre>;
             };
-            const WIDTH = 1300;
-            const HEIGHT = 800;
+            const WIDTH = 1200;
+            const HEIGHT = 700;
             const margin = { top: 20, right: 40, bottom: 160, left: 40, gap: 40 };
             const innerWidth = WIDTH - margin.left - margin.right - margin.gap;
             const innerHeight = HEIGHT - margin.top - margin.bottom - margin.gap;
@@ -618,22 +762,22 @@
 
             return <div>
                 <svg width={WIDTH} height={HEIGHT}>
-                    <Legend2 x={WIDTH/2} y={margin.top} data={data} />
-                    <Map2 x={margin.left + innerWidth * 0.5+30} y={margin.top} height={innerHeight + margin.gap}
+                    <Legend2 x={WIDTH / 2} y={margin.top} data={data} />
+                    <Map2 x={margin.left + innerWidth * 0.5 + 30} y={margin.top} height={innerHeight + margin.gap}
                         width={innerWidth / 2} data={data} map={map} selectedPlace={selectedPlace}
                         setSelectedPlace={setSelectedPlace}
                         tooltipX={tooltipX} setTooltipX={setTooltipX} tooltipY={tooltipY} setTooltipY={setTooltipY} />
-                    <BarChartHospitalizationRate x={margin.left+10} y={margin.top} height={innerHeight * 0.45 + margin.gap}
+                    <BarChartHospitalizationRate x={margin.left + 10} y={margin.top} height={innerHeight * 0.45 + margin.gap}
                         width={innerWidth * 0.55} data={data} map={map} selectedPlace={selectedPlace}
-                        setSelectedPlace={setSelectedPlace} 
+                        setSelectedPlace={setSelectedPlace}
                         tooltipX={tooltipX} setTooltipX={setTooltipX} tooltipY={tooltipY} setTooltipY={setTooltipY} />
-                    <BarChartDeathRate x={margin.left+10} y={margin.top + innerHeight * 0.55} height={innerHeight * 0.45 + margin.gap}
+                    <BarChartDeathRate x={margin.left + 10} y={margin.top + innerHeight * 0.55} height={innerHeight * 0.45 + margin.gap}
                         width={innerWidth * 0.55} data={data} map={map} selectedPlace={selectedPlace}
                         setSelectedPlace={setSelectedPlace}
                         tooltipX={tooltipX} setTooltipX={setTooltipX} tooltipY={tooltipY} setTooltipY={setTooltipY} />
                 </svg>
-                <div style={{ position: "absolute", textAlign: "left", width: "320px", left: "250px", top: "5px" }}>
-                    <h3>New York COVID-19</h3>
+                <div style={{ position: "absolute", textAlign: "left", width: "320px", left: "250px", top: "35px" }}>
+                    <h3 style={{fontSize: "25px"}}>New York COVID-19</h3>
                     <p>A visualization of the hospitalization, death rate, treatment ratio in New York</p>
                 </div>
                 <div>
